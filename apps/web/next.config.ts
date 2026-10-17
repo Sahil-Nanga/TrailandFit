@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Workspace package shipped as TypeScript source.
-  transpilePackages: ["@aurora/api-client", "@aurora/measurements"],
+  transpilePackages: ["@aurora/api-client", "@aurora/measurements", "@aurora/body3d"],
   experimental: {
     agentFeedback: true,
   },

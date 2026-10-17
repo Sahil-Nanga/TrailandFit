@@ -1,0 +1,634 @@
+{
+  "source": "MakeHuman hm08 base mesh and targets (CC0)",
+  "units": "metres; effects are the change in each measurement at morph weight 1",
+  "neutral": {
+    "weights": {
+      "female": 0.5,
+      "male": 0.5
+    },
+    "height": 1.65938,
+    "chest": 0.89891,
+    "waist": 0.69647,
+    "hips": 0.93871,
+    "shoulderWidth": 0.39109,
+    "inseam": 0.71536
+  },
+  "effects": {
+    "female": {
+      "height": -0.0686,
+      "chest": 0.00525,
+      "waist": -0.01781,
+      "hips": -0.00575,
+      "shoulderWidth": -0.03249,
+      "inseam": -0.05728
+    },
+    "male": {
+      "height": 0.07028,
+      "chest": 0.14103,
+      "waist": 0.05204,
+      "hips": -0.01934,
+      "shoulderWidth": 0.04319,
+      "inseam": 0.03072
+    },
+    "female-minweight": {
+      "height": 0.0,
+      "chest": -0.03256,
+      "waist": -0.05582,
+      "hips": -0.06135,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "female-maxweight": {
+      "height": 0.0,
+      "chest": 0.05976,
+      "waist": 0.05854,
+      "hips": 0.08174,
+      "shoulderWidth": 0.0,
+      "inseam": -0.00229
+    },
+    "female-minmuscle": {
+      "height": 0.0,
+      "chest": 0.00453,
+      "waist": 0.05809,
+      "hips": 0.08214,
+      "shoulderWidth": -0.00322,
+      "inseam": 1e-05
+    },
+    "female-maxmuscle": {
+      "height": 0.0,
+      "chest": 0.0375,
+      "waist": -0.04018,
+      "hips": -0.02011,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "male-minweight": {
+      "height": 0.0,
+      "chest": -0.00882,
+      "waist": -0.04574,
+      "hips": -0.05436,
+      "shoulderWidth": 0.0,
+      "inseam": -0.00328
+    },
+    "male-maxweight": {
+      "height": 0.0,
+      "chest": 0.03183,
+      "waist": 0.08847,
+      "hips": 0.06282,
+      "shoulderWidth": 0.0,
+      "inseam": -0.00763
+    },
+    "male-minmuscle": {
+      "height": 0.0,
+      "chest": 0.02477,
+      "waist": 0.126,
+      "hips": 0.08398,
+      "shoulderWidth": 0.0,
+      "inseam": -0.01302
+    },
+    "male-maxmuscle": {
+      "height": 0.0,
+      "chest": -0.01445,
+      "waist": -0.0419,
+      "hips": -0.01541,
+      "shoulderWidth": 0.0,
+      "inseam": -0.00106
+    },
+    "chest-incr": {
+      "height": 0.0,
+      "chest": 0.16524,
+      "waist": 0.00483,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "chest-decr": {
+      "height": 0.0,
+      "chest": -0.16304,
+      "waist": -0.00597,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "waist-incr": {
+      "height": 0.0,
+      "chest": 1e-05,
+      "waist": 0.1022,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "waist-decr": {
+      "height": 0.0,
+      "chest": -1e-05,
+      "waist": -0.10072,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "hips-incr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.17958,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "hips-decr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": -0.0,
+      "hips": -0.07479,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "shoulders-incr": {
+      "height": 0.0,
+      "chest": 0.04501,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.05727,
+      "inseam": 0.0
+    },
+    "shoulders-decr": {
+      "height": 0.0,
+      "chest": -0.02413,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": -0.03082,
+      "inseam": 0.0
+    },
+    "upperLeg-incr": {
+      "height": 0.1037,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.00011,
+      "shoulderWidth": 0.0,
+      "inseam": 0.1037
+    },
+    "upperLeg-decr": {
+      "height": -0.075,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.00609,
+      "shoulderWidth": 0.0,
+      "inseam": -0.0736
+    },
+    "lowerLeg-incr": {
+      "height": 0.081,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.081
+    },
+    "lowerLeg-decr": {
+      "height": -0.059,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": -0.05899
+    },
+    "neck-incr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "neck-decr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "thigh-incr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": 0.0373,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "thigh-decr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": 0.0,
+      "hips": -0.01093,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "upperArm-incr": {
+      "height": 0.0,
+      "chest": 0.00038,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "upperArm-decr": {
+      "height": 0.0,
+      "chest": -0.00028,
+      "waist": 0.0,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "belly-incr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": 0.01796,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    },
+    "belly-decr": {
+      "height": 0.0,
+      "chest": 0.0,
+      "waist": -0.00102,
+      "hips": 0.0,
+      "shoulderWidth": 0.0,
+      "inseam": 0.0
+    }
+  },
+  "eyes": {
+    "base": {
+      "l": [
+        0.03078,
+        1.54618,
+        0.12454
+      ],
+      "r": [
+        -0.03078,
+        1.54618,
+        0.12454
+      ]
+    },
+    "deltas": {
+      "female": {
+        "l": [
+          -0.00235,
+          -0.06068,
+          -0.01476
+        ],
+        "r": [
+          0.00235,
+          -0.06068,
+          -0.01476
+        ]
+      },
+      "male": {
+        "l": [
+          -0.00142,
+          0.07487,
+          0.00185
+        ],
+        "r": [
+          0.00142,
+          0.07487,
+          0.00185
+        ]
+      },
+      "female-minweight": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "female-maxweight": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "female-minmuscle": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "female-maxmuscle": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "male-minweight": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "male-maxweight": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "male-minmuscle": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "male-maxmuscle": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "chest-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "chest-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "waist-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "waist-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hips-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hips-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "shoulders-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "shoulders-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "upperLeg-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "upperLeg-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "lowerLeg-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "lowerLeg-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "neck-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "neck-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "thigh-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "thigh-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "upperArm-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "upperArm-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "belly-incr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "belly-decr": {
+        "l": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  }
+}

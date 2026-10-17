@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "pnpm run assets && next dev",
+    "build": "pnpm run assets && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "assets": "node ../../packages/body3d/scripts/copy-assets.mjs public"
   },
   "dependencies": {
     "@aurora/api-client": "workspace:*",
+    "@aurora/body3d": "workspace:*",
     "@aurora/measurements": "workspace:*",
     "@base-ui/react": "^1.9.0",
     "@hookform/resolvers": "^5.9.1",

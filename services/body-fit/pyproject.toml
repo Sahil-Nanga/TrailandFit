@@ -1,0 +1,44 @@
+[project]
+name = "body-fit"
+version = "0.1.0"
+description = "Fits Trialandfit body-shape parameters to measurements"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.143.3",
+    "mediapipe>=1.1.1",
+    "numpy>=2.5.4",
+    "pillow>=13.0.0",
+    "pydantic>=2.11",
+    "python-multipart>=0.0.32",
+    "scipy>=1.16",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*", "mediapipe", "mediapipe.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

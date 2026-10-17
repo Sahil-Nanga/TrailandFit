@@ -1,24 +1,24 @@
 "use client";
 
 /**
- * AvatarViewer — the slot for the 3D try-on renderer.
- *
- * TEAMMATE: replace the body of this component with the renderer. Keep the props interface
- * stable (or change it together with app/try-on). Everything the renderer needs is passed in:
+ * AvatarViewer: the 3D try-on preview. The body comes from the shared @aurora/body3d package
+ * (MakeHuman CC0 base body), shaped by the body-fit service from the active profile's
+ * measurements, with the face from the user's kept front photo when they opted in.
  *
  * - `measurements`: the active profile's body measurements, always in centimetres/kilograms.
  *   Only `height_cm` is guaranteed; any other field may be null.
  * - `outfit.top` / `outfit.bottom`: the garments the user picked, or null for "nothing".
- *   Each has the product page URL, title and (usually) a product image URL from the shop.
+ *   Clothes are not drawn on the body yet (garment fitting is out of scope).
  * - `photos`: the user's own front/side photos, only if they opted in to keeping them.
- *   These are short-lived signed URLs (about 10 minutes): load them when needed, never store,
- *   log or forward them. The page re-fetches fresh URLs when the profile changes.
+ *   Short-lived signed URLs (about 10 minutes): loaded when needed, never stored, logged or
+ *   forwarded anywhere except the body-fit service that bakes the face.
  *
- * Constraints from CLAUDE.md: no measurement values in logs, and 3D dependencies
- * (three.js / react-three-fiber) are added when this renderer is integrated, not before.
+ * three.js is only loaded on this page: the scene is a client-only lazy import.
  */
 import type { Measurements } from "@aurora/api-client";
-import { Box } from "lucide-react";
+import dynamic from "next/dynamic";
+
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface Garment {
   id: string;
@@ -48,22 +48,11 @@ export interface AvatarViewerProps {
   className?: string;
 }
 
-export function AvatarViewer({ outfit, photos, className }: AvatarViewerProps) {
-  const wearing = [outfit.top?.title, outfit.bottom?.title].filter(Boolean).join(" + ");
-  return (
-    <div
-      role="img"
-      aria-label={wearing ? `3D preview placeholder, wearing ${wearing}` : "3D preview placeholder"}
-      className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/30 bg-secondary/50 p-6 text-center ${className ?? ""}`}
-    >
-      <Box aria-hidden className="size-10 text-primary" />
-      <p className="font-medium">3D preview coming soon</p>
-      <p className="max-w-56 text-sm text-muted-foreground">
-        {wearing ? `Will show you wearing ${wearing}.` : "Pick a top and a bottom to see the outfit here."}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        {photos.front ? "Your kept photos will be used for the preview." : "No photos kept for this profile."}
-      </p>
-    </div>
-  );
+const AvatarScene = dynamic(() => import("./avatar-scene").then((m) => m.AvatarScene), {
+  ssr: false,
+  loading: () => <Skeleton className="aspect-[3/4] w-full rounded-xl" />,
+});
+
+export function AvatarViewer(props: AvatarViewerProps) {
+  return <AvatarScene {...props} />;
 }

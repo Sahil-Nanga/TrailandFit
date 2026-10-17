@@ -1,0 +1,74 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1b1523;
+  --muted: #625a70;
+  --border: #e7e2f0;
+  --surface: #f5f1fe;
+  --primary: #7b5bc7;
+  --ring: #9478d8;
+  --warn: #9a5b00;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.layout { display: grid; grid-template-columns: 340px 1fr; height: 100dvh; }
+.panel { overflow-y: auto; padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+.brand { color: var(--primary); }
+.muted { color: var(--muted); margin: 0; font-size: 13px; }
+.small { font-size: 12px; }
+.toggles { display: flex; gap: 8px; }
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.segmented button { border: 0; background: var(--bg); padding: 6px 12px; font: inherit; cursor: pointer; }
+.segmented button[aria-pressed="true"] { background: var(--surface); color: #3f2f6e; font-weight: 600; }
+.fields { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.field label { font-weight: 500; font-size: 14px; }
+.input-wrap { display: inline-flex; align-items: center; gap: 6px; }
+.input-wrap input { width: 72px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; font: inherit; text-align: right; }
+.unit { color: var(--muted); font-size: 13px; width: 20px; }
+input[type="range"] { width: 100%; accent-color: var(--primary); }
+.model { margin: 0; font-size: 12px; color: var(--muted); }
+.model.off { color: var(--warn); }
+.skin { border: 0; padding: 0; margin: 0; display: flex; gap: 10px; align-items: center; }
+.skin legend { font-weight: 500; font-size: 14px; margin-bottom: 8px; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--primary); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.viewer { position: relative; min-height: 0; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); margin: 0; }
+@media (max-width: 760px) {
+  .layout { grid-template-columns: 1fr; grid-template-rows: 60dvh auto; height: auto; }
+  .viewer { order: -1; height: 60dvh; }
+  .panel { border-right: 0; border-top: 1px solid var(--border); }
+}
+.status { margin: 0; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--surface); color: #3f2f6e; }
+.status.offline { background: #fff4e5; color: var(--warn); }
+.account { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+.account label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 500; }
+.account input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+.account .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.account button { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+.account button.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 500; }
+.account button.link { border: 0; padding: 0; background: none; color: var(--primary); text-decoration: underline; align-self: flex-start; }
+.account button:disabled { opacity: 0.6; cursor: default; }
+.error { color: #b42318; margin: 0; font-size: 13px; }
+.typical { font-weight: 400; font-size: 11px; color: var(--muted); margin-left: 4px; }
+.look { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.look h2, .hair legend { font-size: 14px; font-weight: 500; margin: 0 0 8px; }
+.look-photo { display: flex; flex-direction: column; gap: 8px; }
+.look .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.look button:not(.swatch) { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; align-self: flex-start; }
+.look button.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 500; }
+.look button:disabled { opacity: 0.6; cursor: default; }
+.look a { color: var(--primary); }
+.hair { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.hair .segmented { flex-wrap: wrap; }
+.hair .segmented button { border: 0; border-radius: 0; padding: 6px 10px; }
+.swatches { display: flex; gap: 10px; }
+.swatch:disabled, .skin:disabled .swatch { opacity: 0.4; cursor: default; }
+.field-label { font-weight: 500; font-size: 14px; }
+.field .segmented { align-self: flex-start; }

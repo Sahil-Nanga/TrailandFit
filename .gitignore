@@ -26,3 +26,9 @@ coverage/
 .vscode/
 CLAUDE.md
 .claude/
+
+# The 3D modeler's working agreement is kept local (per its own rules).
+apps/modeler/CLAUDE.md
+
+# Copies of packages/body3d/assets, made by its copy-assets script.
+apps/*/public/body3d/
