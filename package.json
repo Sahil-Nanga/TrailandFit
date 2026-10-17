@@ -1,0 +1,21 @@
+{
+  "name": "aurora-fitting-room",
+  "version": "1.0.0",
+  "scripts": {
+    "gen:api": "pnpm --filter @aurora/api-client gen",
+    "dev:web": "pnpm --filter web dev",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "license": "Apache-2.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.14.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.14.0",
+  "type": "module",
+  "private": true
+}

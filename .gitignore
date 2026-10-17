@@ -1,0 +1,28 @@
+# Dependencies and environments
+node_modules/
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Build and tool output
+.next/
+.output/
+.wxt/
+dist/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+coverage/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+CLAUDE.md
+.claude/
