@@ -216,6 +216,8 @@ def load_mhclo(path: Path) -> tuple[list[list[int]], list[list[float]], list[lis
             scales[parts[0][0]] = (int(parts[1]), int(parts[2]), float(parts[3]))
         elif parts[0] == "verts":
             in_verts = True
+        elif parts[0] == "delete_verts":  # clothes: the body vertices they cover (not bindings)
+            in_verts = False
         elif in_verts and parts[0].isdigit():
             if len(parts) == 1:
                 refs.append([int(parts[0])] * 3)
@@ -280,6 +282,30 @@ def build_hair(style_dir: Path, base_dm: F, deltas_dm: dict[str, F], shift: F, o
     write_glb(out, (positions + shift)[src], base_normals[src], uvs, tris, morphs, name="Hair", texture_png=buffer.getvalue())
 
 
+def load_deltas(data: Path, n: int) -> dict[str, F]:
+    """The body's morph targets on the base mesh's vertices (MakeHuman decimetres)."""
+    ethnic = {
+        g: np.mean([load_target(data / "targets" / "macrodetails" / f"{r}-{g}-young.target", n) for r in RACES], axis=0)
+        for g in ("female", "male")
+    }
+    deltas: dict[str, F] = {"female": ethnic["female"], "male": ethnic["male"]}
+    for g in ("female", "male"):
+        for w in ("minweight", "maxweight"):
+            deltas[f"{g}-{w}"] = load_target(
+                data / "targets" / "macrodetails" / f"universal-{g}-young-averagemuscle-{w}.target", n
+            )
+        for m in MUSCLE:
+            deltas[f"{g}-{m}"] = load_target(
+                data / "targets" / "macrodetails" / f"universal-{g}-young-{m}-averageweight.target", n
+            )
+    for name, stem in MEASURE.items():
+        for direction in ("incr", "decr"):
+            deltas[f"{name}-{direction}"] = load_target(data / "targets" / "measure" / f"{stem}-{direction}.target", n)
+    for name, rel in EXTRA.items():
+        deltas[name] = load_target(data / "targets" / f"{rel}.target", n)
+    return deltas
+
+
 def main() -> None:
     data, out = Path(sys.argv[1]), Path(sys.argv[2])
     raw, raw_uvs, faces = load_obj(data / "3dobjs" / "base.obj")
@@ -307,27 +333,8 @@ def main() -> None:
         return p * SCALE
 
     # Morph deltas on the original vertex set (metres).
-    ethnic = {
-        g: np.mean([load_target(data / "targets" / "macrodetails" / f"{r}-{g}-young.target", n) for r in RACES], axis=0)
-        for g in ("female", "male")
-    }
-    deltas: dict[str, F] = {"female": ethnic["female"], "male": ethnic["male"]}
-    for g in ("female", "male"):
-        for w in ("minweight", "maxweight"):
-            deltas[f"{g}-{w}"] = load_target(
-                data / "targets" / "macrodetails" / f"universal-{g}-young-averagemuscle-{w}.target", n
-            )
-        for m in MUSCLE:
-            deltas[f"{g}-{m}"] = load_target(
-                data / "targets" / "macrodetails" / f"universal-{g}-young-{m}-averageweight.target", n
-            )
-    for name, stem in MEASURE.items():
-        for direction in ("incr", "decr"):
-            deltas[f"{name}-{direction}"] = load_target(data / "targets" / "measure" / f"{stem}-{direction}.target", n)
-    for name, rel in EXTRA.items():
-        deltas[name] = load_target(data / "targets" / f"{rel}.target", n)
-    deltas_dm = dict(deltas)
-    deltas = {k: to_m(v) for k, v in deltas.items()}
+    deltas_dm = load_deltas(data, n)
+    deltas = {k: to_m(v) for k, v in deltas_dm.items()}
 
     base = to_m(raw)
     # Calibrate around the androgynous midpoint (half female, half male), where the slider starts.

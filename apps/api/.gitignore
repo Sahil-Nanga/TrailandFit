@@ -9,4 +9,4 @@ __pycache__/
 htmlcov/
 
 # Downloaded ML models (see scripts/download_models.py)
-models/
+/models/

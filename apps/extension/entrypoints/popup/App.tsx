@@ -1,5 +1,6 @@
 import { errorMessage, type MeasurementProfile } from "@aurora/api-client";
 import {
+  chartFromTables,
   FIELD_INFO,
   FIELD_ORDER,
   formatForInput,
@@ -16,6 +17,7 @@ import { api } from "@/lib/api";
 import { WEB_URL } from "@/lib/config";
 import { DEFAULT_PREFS, loadPrefs, type Prefs, savePrefs } from "@/lib/prefs";
 import { originPattern } from "@/lib/messages";
+import { readSizeOptions } from "@/lib/read-sizes";
 import { readProductImage, readTables } from "@/lib/read-tables";
 import { supabase } from "@/lib/supabase";
 
@@ -273,31 +275,65 @@ function MeasurementList({
   );
 }
 
-type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
+type SaveState =
+  | { kind: "idle" }
+  | { kind: "saving"; then: "stay" | "view" }
+  | { kind: "saved" }
+  | { kind: "error"; message: string };
 
 function SavePage({ tab }: { tab: CurrentTab | null | undefined }) {
   const [state, setState] = useState<SaveState>({ kind: "idle" });
 
-  async function save() {
+  /** Save this page (saving it again returns the existing item); "view" opens it on the 3D body. */
+  async function save(then: "stay" | "view") {
     if (!tab) return;
-    setState({ kind: "saving" });
+    setState({ kind: "saving", then });
     try {
-      const image = await readProductImage(tab.id);
-      const { error } = await api.POST("/v1/saved-items", {
-        // "Product name - Category | Shop" -> "Product name - Category"
-        body: { url: tab.url, title: tab.title.split(" | ")[0]?.trim().slice(0, 300) || null, image_url: image },
+      const [image, sizes, tables] = await Promise.all([
+        readProductImage(tab.id),
+        readSizeOptions(tab.id),
+        readTables(tab.id),
+      ]);
+      const chart = chartFromTables(tables);
+      const { data, error } = await api.POST("/v1/saved-items", {
+        body: {
+          url: tab.url,
+          // "Product name - Category | Shop" -> "Product name - Category"
+          title: tab.title.split(" | ")[0]?.trim().slice(0, 300) || null,
+          image_url: image,
+          // The shop's sizes and size chart, for the size picker on the try-on page.
+          sizes: sizes.length > 0 ? sizes.map((s) => ({ ...s, label: s.label.slice(0, 40) })) : null,
+          size_chart: chart && {
+            ...chart,
+            sizes: chart.sizes.slice(0, 40).map((s) => ({ ...s, label: s.label.slice(0, 40) })),
+          },
+        },
       });
-      setState(error ? { kind: "error", message: errorMessage(error, "Could not save this page.") } : { kind: "saved" });
+      if (!data) {
+        setState({ kind: "error", message: errorMessage(error, "Could not save this page.") });
+        return;
+      }
+      if (then === "view") {
+        openWebsite(`/try-on?item=${encodeURIComponent(data.id)}`);
+        return;
+      }
+      setState({ kind: "saved" });
     } catch {
       setState({ kind: "error", message: "Can't reach the server." });
     }
   }
 
+  const saving = state.kind === "saving";
   return (
     <section className="stack save" aria-label="Save this page">
-      <button type="button" className="primary" disabled={!tab || state.kind === "saving" || state.kind === "saved"} onClick={() => void save()}>
-        {state.kind === "saved" ? "Saved ✓" : state.kind === "saving" ? "Saving…" : "Save this page"}
-      </button>
+      <div className="row">
+        <button type="button" className="primary" disabled={!tab || saving} onClick={() => void save("view")}>
+          {saving && state.then === "view" ? "Opening…" : "View on me"}
+        </button>
+        <button type="button" disabled={!tab || saving || state.kind === "saved"} onClick={() => void save("stay")}>
+          {state.kind === "saved" ? "Saved ✓" : saving && state.then === "stay" ? "Saving…" : "Save this page"}
+        </button>
+      </div>
       <p className="muted small" aria-live="polite">
         {tab === null
           ? "Open a clothing page to save it for later."
@@ -305,7 +341,7 @@ function SavePage({ tab }: { tab: CurrentTab | null | undefined }) {
             ? state.message
             : state.kind === "saved"
               ? "Saved to your wardrobe on the Trialandfit website."
-              : "Saves this item's link, title and picture to your wardrobe."}
+              : "View on me saves this item with its sizes and shows it on your 3D body on the website."}
       </p>
     </section>
   );

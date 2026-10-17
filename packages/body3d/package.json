@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint .",
-    "build:body": "uv run --with numpy --with scipy --with pillow python -I scripts/build_body.py \"$MAKEHUMAN_DATA\" . \"$MAKEHUMAN_ASSETS\" && gltf-transform sparse assets/models/body.raw.glb assets/models/body.sparse.glb && gltf-transform meshopt assets/models/body.sparse.glb assets/models/body.glb && rm assets/models/body.raw.glb assets/models/body.sparse.glb && for f in assets/models/hair/*.raw.glb; do gltf-transform meshopt \"$f\" \"${f%.raw.glb}.glb\" && rm \"$f\"; done"
+    "build:body": "uv run --with numpy --with scipy --with pillow python -I scripts/build_body.py \"$MAKEHUMAN_DATA\" . \"$MAKEHUMAN_ASSETS\" && gltf-transform sparse assets/models/body.raw.glb assets/models/body.sparse.glb && gltf-transform meshopt assets/models/body.sparse.glb assets/models/body.glb && rm assets/models/body.raw.glb assets/models/body.sparse.glb && for f in assets/models/hair/*.raw.glb; do gltf-transform meshopt \"$f\" \"${f%.raw.glb}.glb\" && rm \"$f\"; done",
+    "build:clothes": "uv run --directory ../../services/body-fit python ../../packages/body3d/scripts/build_clothes.py \"$MAKEHUMAN_DATA\" \"$MAKEHUMAN_ASSETS\" ../../packages/body3d && for f in assets/models/clothes/*.raw.glb; do gltf-transform meshopt \"$f\" \"${f%.raw.glb}.glb\" && rm \"$f\"; done"
   },
   "dependencies": {
     "@aurora/api-client": "workspace:*",

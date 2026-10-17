@@ -1,6 +1,7 @@
 """Saved clothing links. Every query is scoped to the caller's user id."""
 
 import re
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -102,6 +103,8 @@ def _to_schema(row: SavedItemRow) -> SavedItem:
         title=row.title,
         category=row.category,  # validated here; also constrained by a CHECK constraint
         image_url=row.image_url,
+        sizes=row.sizes,  # validated here, as written by save_item
+        size_chart=row.size_chart,
         created_at=row.created_at,
     )
 
@@ -124,11 +127,28 @@ async def list_saved_items(
     )
 
 
+def _size_info(data: SavedItemCreate) -> dict[str, Any]:
+    """Sizes and chart as stored (JSON); only what the request included."""
+    info: dict[str, Any] = {}
+    if data.sizes is not None:
+        info["sizes"] = [size.model_dump() for size in data.sizes]
+    if data.size_chart is not None:
+        info["size_chart"] = data.size_chart.model_dump()
+    return info
+
+
 async def save_item(session: AsyncSession, user_id: str, data: SavedItemCreate) -> SavedItem:
-    """Saving the same URL twice returns the existing item instead of a duplicate."""
+    """Saving the same URL twice returns the existing item instead of a duplicate, with its
+    sizes and size chart refreshed when the request has them (stock changes)."""
     url = str(data.url)
+    sizes = _size_info(data)
     existing = await _find_by_url(session, user_id, url)
     if existing is not None:
+        if sizes:
+            for key, value in sizes.items():
+                setattr(existing, key, value)
+            await session.commit()
+            await session.refresh(existing)
         return _to_schema(existing)
     row = SavedItemRow(
         user_id=user_id,
@@ -136,6 +156,7 @@ async def save_item(session: AsyncSession, user_id: str, data: SavedItemCreate) 
         title=data.title or None,
         category=data.category or guess_category(data.title, url),
         image_url=str(data.image_url) if data.image_url else None,
+        **sizes,
     )
     session.add(row)
     try:

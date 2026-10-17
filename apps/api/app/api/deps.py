@@ -14,12 +14,13 @@ _store: SupabasePhotoStore | None = None
 def get_photo_store(settings: Annotated[Settings, Depends(get_settings)]) -> PhotoStore | None:
     """Private photo storage, or None when it is not configured (keeping photos disabled)."""
     global _store
-    if settings.supabase_url is None or settings.supabase_secret_key is None:
+    secret = settings.supabase_secret_key
+    if settings.supabase_url is None or secret is None or not secret.get_secret_value():
         return None
     if _store is None:
         _store = SupabasePhotoStore(
             str(settings.supabase_url),
-            settings.supabase_secret_key.get_secret_value(),
+            secret.get_secret_value(),
             settings.photo_bucket,
         )
     return _store

@@ -180,3 +180,63 @@ async def test_category_and_image_validation(
         URL, json={"url": "https://x.example", **body}, headers=auth(ALICE)
     )
     assert response.status_code == 422
+
+
+CHART = {
+    "basis": "body",
+    "fields": ["chest_cm", "waist_cm"],
+    "sizes": [
+        {
+            "label": "S",
+            "ranges": {"chest_cm": {"min": 88, "max": 94}, "waist_cm": {"min": 74, "max": 80}},
+        },
+        {"label": "M", "ranges": {"chest_cm": {"min": 94, "max": 100}}},
+    ],
+}
+
+
+async def test_sizes_and_chart_saved_and_refreshed(
+    db_client: httpx.AsyncClient, auth: Auth
+) -> None:
+    plain = await _save(db_client, auth, ALICE)
+    assert plain["sizes"] is None and plain["size_chart"] is None
+
+    sizes = [{"label": "S", "available": True}, {"label": "M", "available": False}]
+    again = await _save(db_client, auth, ALICE, sizes=sizes, size_chart=CHART)
+    assert again["id"] == plain["id"]  # same page: refreshed, not duplicated
+    assert again["sizes"] == sizes
+    assert again["size_chart"] == CHART
+
+    restocked = [{"label": "S", "available": True}, {"label": "M", "available": True}]
+    latest = await _save(db_client, auth, ALICE, sizes=restocked)
+    assert latest["sizes"] == restocked and latest["size_chart"] == CHART  # chart kept
+
+    unknown = await _save(
+        db_client, auth, ALICE, url="https://shop.example/b", sizes=[{"label": "42"}]
+    )
+    assert unknown["sizes"] == [{"label": "42", "available": None}]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"sizes": [{"label": ""}]},
+        {"sizes": [{"label": "S", "stock": 3}]},
+        {"sizes": [{"label": str(i)} for i in range(41)]},
+        {"size_chart": {**CHART, "basis": "garment"}},
+        {"size_chart": {**CHART, "fields": ["shoe_size"]}},
+        {
+            "size_chart": {
+                **CHART,
+                "sizes": [{"label": "S", "ranges": {"chest_cm": {"min": -1, "max": 2}}}],
+            }
+        },
+        {"size_chart": {**CHART, "sizes": []}},
+    ],
+)
+async def test_size_validation(
+    db_client: httpx.AsyncClient, auth: Auth, body: dict[str, Any]
+) -> None:
+    payload = {"url": "https://shop.example/jacket", **body}
+    response = await db_client.post(URL, json=payload, headers=auth(ALICE))
+    assert response.status_code == 422

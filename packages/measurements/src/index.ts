@@ -2,4 +2,5 @@
 export * from "./fields";
 export * from "./size-chart";
 export * from "./size-match";
+export * from "./store-sizes";
 export * from "./units";

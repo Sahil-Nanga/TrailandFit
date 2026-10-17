@@ -2,6 +2,7 @@
 
 POST /fit: measurements in, morph weights and the fitted body's measurements out.
 POST /likeness: a front photo in, a body texture with the face baked in out.
+POST /garment-image: a shop's product picture URL in, a garment texture and colour out.
 
 Measurements and photos are personal data: they are never logged or stored here.
 """
@@ -10,15 +11,17 @@ import asyncio
 import base64
 import os
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from body_fit import garment_image
 from body_fit.body import load_body, shape_weights
 from body_fit.fit import TOLERANCE_M, fit
+from body_fit.garment_image import GarmentImageError
 from body_fit.likeness import FaceDetector, LikenessError, MediaPipeFaceDetector, bake_likeness
 from body_fit.measure import DIMENSIONS
 
@@ -71,10 +74,33 @@ class LikenessResponse(BaseModel):
     eye_color: str | None = Field(description="#rrggbb, when the irises were visible")
 
 
+class GarmentImageRequest(BaseModel):
+    url: AnyHttpUrl = Field(description="The product picture saved with the item")
+    category: Literal["top", "bottom"] = Field(
+        "top", description="Which garment to crop out when a model is wearing it"
+    )
+
+
+class GarmentImageResponse(BaseModel):
+    texture: str = Field(description="JPEG data URL: the garment, cropped, on its own colour")
+    color: str = Field(description="#rrggbb, the garment's main colour")
+    cutout: bool = Field(description="Whether the photo's backdrop was found and removed")
+
+
 @app.exception_handler(LikenessError)
-async def likeness_error(_: Request, exc: LikenessError) -> JSONResponse:
+@app.exception_handler(GarmentImageError)
+async def likeness_error(_: Request, exc: LikenessError | GarmentImageError) -> JSONResponse:
     error = {"code": exc.code, "message": exc.message}
     return JSONResponse(status_code=422, content={"error": error})
+
+
+@lru_cache
+def pose_finder() -> garment_image.PoseFinder | None:
+    """None when the pose model isn't downloaded: pictures are then cropped without it."""
+    try:
+        return garment_image.MediaPipePoseFinder()
+    except FileNotFoundError:
+        return None
 
 
 @lru_cache
@@ -140,3 +166,11 @@ async def likeness(
         skin_color=result.skin_color,
         eye_color=result.eye_color,
     )
+
+
+@app.post("/garment-image", response_model=GarmentImageResponse)
+async def garment_texture(request: GarmentImageRequest) -> GarmentImageResponse:
+    data = await garment_image.fetch(str(request.url))
+    # CPU-bound (~0.1 s): keep the event loop free.
+    result = await asyncio.to_thread(garment_image.prepare, data, request.category, pose_finder())
+    return GarmentImageResponse(texture=result.data_url(), color=result.color, cutout=result.cutout)

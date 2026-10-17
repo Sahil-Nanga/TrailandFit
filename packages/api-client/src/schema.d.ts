@@ -223,6 +223,22 @@ export interface components {
              */
             side_photo?: string | null;
         };
+        /** ChartRange */
+        ChartRange: {
+            /** Max */
+            max: number;
+            /** Min */
+            min: number;
+        };
+        /** ChartSize */
+        ChartSize: {
+            /** Label */
+            label: string;
+            /** Ranges */
+            ranges: {
+                [key: string]: components["schemas"]["ChartRange"];
+            };
+        };
         /** ErrorDetail */
         ErrorDetail: {
             /** Code */
@@ -418,6 +434,9 @@ export interface components {
             id: string;
             /** Image Url */
             image_url: string | null;
+            size_chart: components["schemas"]["SizeChart"] | null;
+            /** Sizes */
+            sizes: components["schemas"]["StoreSize"][] | null;
             /** Title */
             title: string | null;
             /** Url */
@@ -429,6 +448,9 @@ export interface components {
             category?: ("top" | "bottom" | "other") | null;
             /** Image Url */
             image_url?: string | null;
+            size_chart?: components["schemas"]["SizeChart"] | null;
+            /** Sizes */
+            sizes?: components["schemas"]["StoreSize"][] | null;
             /** Title */
             title?: string | null;
             /**
@@ -455,6 +477,31 @@ export interface components {
              * @enum {string}
              */
             category: "top" | "bottom" | "other";
+        };
+        /**
+         * SizeChart
+         * @description The shop's body-measurement size chart for the item, in cm and kg.
+         */
+        SizeChart: {
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "body" | "unknown";
+            /** Fields */
+            fields: ("height_cm" | "weight_kg" | "chest_cm" | "waist_cm" | "hips_cm" | "shoulder_width_cm" | "inseam_cm" | "sleeve_cm" | "neck_cm" | "thigh_cm")[];
+            /** Sizes */
+            sizes: components["schemas"]["ChartSize"][];
+        };
+        /**
+         * StoreSize
+         * @description One of the sizes the shop offers for the item, as read from its page.
+         */
+        StoreSize: {
+            /** Available */
+            available?: boolean | null;
+            /** Label */
+            label: string;
         };
         /** ValidationError */
         ValidationError: {

@@ -1,6 +1,6 @@
 import { useGLTF } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
-import { type Mesh, MeshPhysicalMaterial, SRGBColorSpace, TextureLoader } from "three";
+import { BufferAttribute, type Mesh, MeshPhysicalMaterial, SRGBColorSpace, TextureLoader, Vector3 } from "three";
 
 import { assetUrl } from "./assets";
 import calibration from "./calibration.json";
@@ -21,20 +21,65 @@ function eyePosition(side: "l" | "r", weights: BodyShape["weights"]): Vec3 {
   return position;
 }
 
+/** Skip the body's surface where `hidden` is set (under a garment), so skin can't poke through. */
+function hideCovered(shader: { vertexShader: string; fragmentShader: string }) {
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", "#include <common>\nattribute float hidden;\nvarying float vHidden;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvHidden = hidden;");
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <common>", "#include <common>\nvarying float vHidden;")
+    .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (vHidden > 0.5) discard;");
+}
+
+/** Points on the neutral base body: x, y, z in whole millimetres, flattened. */
+export type BodyPoints = readonly number[];
+
+/** Flags for the body's vertices at any of these points (to the millimetre, give or take one:
+ *  compression stores positions quantized). Seam duplicates share a position, so all match. */
+function flagPoints(body: Mesh, points: BodyPoints): Float32Array {
+  const position = body.geometry.getAttribute("position");
+  const flags = new Float32Array(position.count);
+  if (points.length === 0) return flags;
+  const wanted = new Set<string>();
+  for (let i = 0; i + 2 < points.length; i += 3) wanted.add(`${points[i]},${points[i + 1]},${points[i + 2]}`);
+  body.updateMatrix();
+  const p = new Vector3();
+  for (let v = 0; v < position.count; v++) {
+    p.fromBufferAttribute(position, v).applyMatrix4(body.matrix).multiplyScalar(1000);
+    const [x, y, z] = [Math.round(p.x), Math.round(p.y), Math.round(p.z)];
+    search: for (const dx of [0, -1, 1])
+      for (const dy of [0, -1, 1])
+        for (const dz of [0, -1, 1])
+          if (wanted.has(`${x + dx},${y + dy},${z + dz}`)) {
+            flags[v] = 1;
+            break search;
+          }
+  }
+  return flags;
+}
+
 interface Props {
   shape: BodyShape;
+  /** Parts of the body covered by garment models (hidden so skin can't poke through). */
+  hidden?: BodyPoints | null;
   skinColor: string;
   /** Body texture with the face baked in (data URL); replaces the plain skin colour. */
   texture?: string | null;
   eyeColor?: string | null;
 }
 
-export function BodyModel({ shape, skinColor, texture = null, eyeColor = null }: Props) {
+export function BodyModel({ shape, skinColor, texture = null, eyeColor = null, hidden = null }: Props) {
   const { nodes } = useGLTF(MODEL, false, true); // meshopt-compressed; no Draco
   const body = nodes.Body as Mesh;
   const dictionary = useMemo(() => body.morphTargetDictionary ?? {}, [body]);
 
   const influences = useMemo(() => influencesFor(dictionary, shape.weights), [dictionary, shape.weights]);
+
+  // The geometry is shared (useGLTF caches it), so the hidden flags are rewritten each time.
+  const hiddenKey = hidden?.length ? `${hidden.length}:${hidden[0]}:${hidden[hidden.length - 1]}` : "";
+  useEffect(() => {
+    body.geometry.setAttribute("hidden", new BufferAttribute(flagPoints(body, hidden ?? []), 1));
+  }, [body, hiddenKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const map = useMemo(() => {
     if (!texture) return null;
@@ -46,18 +91,18 @@ export function BodyModel({ shape, skinColor, texture = null, eyeColor = null }:
   }, [texture]);
   useEffect(() => () => map?.dispose(), [map]);
 
-  const material = useMemo(
-    () =>
-      new MeshPhysicalMaterial({
-        color: map ? "#ffffff" : skinColor, // the texture already carries the skin colour
-        map,
-        roughness: 0.55,
-        sheen: 0.25,
-        sheenRoughness: 0.8,
-        sheenColor: "#ffd9c7",
-      }),
-    [skinColor, map],
-  );
+  const material = useMemo(() => {
+    const skin = new MeshPhysicalMaterial({
+      color: map ? "#ffffff" : skinColor, // the texture already carries the skin colour
+      map,
+      roughness: 0.55,
+      sheen: 0.25,
+      sheenRoughness: 0.8,
+      sheenColor: "#ffd9c7",
+    });
+    skin.onBeforeCompile = hideCovered;
+    return skin;
+  }, [skinColor, map]);
   useEffect(() => () => material.dispose(), [material]);
 
   return (

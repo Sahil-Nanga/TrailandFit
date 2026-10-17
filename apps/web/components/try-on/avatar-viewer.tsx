@@ -8,7 +8,9 @@
  * - `measurements`: the active profile's body measurements, always in centimetres/kilograms.
  *   Only `height_cm` is guaranteed; any other field may be null.
  * - `outfit.top` / `outfit.bottom`: the garments the user picked, or null for "nothing".
- *   Clothes are not drawn on the body yet (garment fitting is out of scope).
+ *   Drawn as close-fitting shells cut from the body (see @aurora/body3d garments.ts), with the
+ *   product picture on the front, loosened or tightened for the chosen size when the shop
+ *   had a size chart. No drape.
  * - `photos`: the user's own front/side photos, only if they opted in to keeping them.
  *   Short-lived signed URLs (about 10 minutes): loaded when needed, never stored, logged or
  *   forwarded anywhere except the body-fit service that bakes the face.
@@ -16,6 +18,7 @@
  * three.js is only loaded on this page: the scene is a client-only lazy import.
  */
 import type { Measurements } from "@aurora/api-client";
+import type { GarmentRoom } from "@aurora/body3d";
 import dynamic from "next/dynamic";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +31,9 @@ export interface Garment {
   url: string;
   /** Product image from the shop, if one was captured when saving. */
   imageUrl: string | null;
+  /** The size being tried and its extra room over a regular fit (null: no size chart). */
+  size: string | null;
+  room: GarmentRoom | null;
 }
 
 export interface Outfit {

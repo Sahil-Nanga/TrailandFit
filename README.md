@@ -85,8 +85,31 @@ wardrobe for the active profile, next to a 3D preview of their body
 (`apps/web/components/try-on/avatar-viewer.tsx`, built on `packages/body3d`). The preview is
 shaped by the body-fit service from the profile's measurements (a quick estimate if the service
 isn't running), shows the face from the kept front photo when the user opted in to keeping
-photos, and has hair presets. Clothes aren't drawn on the body yet. Set
-`NEXT_PUBLIC_BODY_FIT_URL` (default `http://127.0.0.1:8001`) and run the body-fit service.
+photos, and has hair presets. Set `NEXT_PUBLIC_BODY_FIT_URL` (default
+`http://127.0.0.1:8001`) and run the body-fit service.
+
+The picked clothes are drawn on the body, in the size you pick. **View on me** in the extension
+saves the shop page with its sizes (which are sold out) and size chart, and opens
+`/try-on?item=<id>` wearing it.
+
+- Shape: MakeHuman CC0 garment models (T-shirt, long sleeves, jeans, shorts, skirt) bound to
+  the body like the hair, so they follow its shape; the style is guessed from the title. Skin
+  under them is hidden so it can't poke through (`packages/body3d/src/garments.ts`,
+  `GarmentModel.tsx`).
+- Size: the picker shows the shop's sizes, preselects the one the size chart suggests, and the
+  garment is loosened or tightened by the room that size leaves at the chest, waist, hips and
+  thighs (`packages/measurements/src/store-sizes.ts`). Without a size chart every size looks
+  the same.
+- Look: the body-fit service fetches the product picture (`POST /garment-image`; public
+  addresses only), removes a plain backdrop, crops to the garment when a model is wearing it
+  (MediaPipe pose), and the picture goes on the front with its main colour on the back.
+- Limits: no cloth simulation, one model per style, and model photos map less well than flat
+  product shots.
+
+Rebuilding: after `body.glb` changes, re-run `packages/body3d/scripts/garment_landmarks.py`
+and `MAKEHUMAN_DATA=... MAKEHUMAN_ASSETS=... pnpm --filter @aurora/body3d build:clothes`
+(the assets are the CC0 pack listed in `packages/body3d/assets/ASSETS.md`).
+
 The viewer's props:
 
 - `measurements`: the active profile, in cm/kg (`height_cm` always set, others may be null)
@@ -100,8 +123,8 @@ morph targets, shaped live from the measurement form.
 ```bash
 pnpm --filter modeler dev          # http://localhost:5173
 pnpm --filter modeler test         # measurement -> morph mapping tests
-uv run --directory services/body-fit python -m scripts.download_models   # face model (once)
-uv run --directory services/body-fit uvicorn body_fit.main:app --port 8001   # fitting + face
+uv run --directory services/body-fit python -m scripts.download_models   # face + pose models (once)
+uv run --directory services/body-fit uvicorn body_fit.main:app --port 8001   # fitting, face, garment pictures
 uv run --directory services/body-fit pytest
 ```
 

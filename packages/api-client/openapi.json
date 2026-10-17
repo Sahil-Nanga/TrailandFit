@@ -91,6 +91,67 @@
         "title": "Body_estimate_photo_v1_photos_estimate_post",
         "type": "object"
       },
+      "ChartRange": {
+        "additionalProperties": false,
+        "properties": {
+          "max": {
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Max",
+            "type": "number"
+          },
+          "min": {
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Min",
+            "type": "number"
+          }
+        },
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "ChartRange",
+        "type": "object"
+      },
+      "ChartSize": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "ranges": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ChartRange"
+            },
+            "propertyNames": {
+              "enum": [
+                "height_cm",
+                "weight_kg",
+                "chest_cm",
+                "waist_cm",
+                "hips_cm",
+                "shoulder_width_cm",
+                "inseam_cm",
+                "sleeve_cm",
+                "neck_cm",
+                "thigh_cm"
+              ]
+            },
+            "title": "Ranges",
+            "type": "object"
+          }
+        },
+        "required": [
+          "label",
+          "ranges"
+        ],
+        "title": "ChartSize",
+        "type": "object"
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -616,6 +677,30 @@
             ],
             "title": "Image Url"
           },
+          "size_chart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SizeChart"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sizes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/StoreSize"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sizes"
+          },
           "title": {
             "anyOf": [
               {
@@ -638,6 +723,8 @@
           "title",
           "category",
           "image_url",
+          "sizes",
+          "size_chart",
           "created_at"
         ],
         "title": "SavedItem",
@@ -675,6 +762,31 @@
               }
             ],
             "title": "Image Url"
+          },
+          "size_chart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SizeChart"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sizes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/StoreSize"
+                },
+                "maxItems": 40,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sizes"
           },
           "title": {
             "anyOf": [
@@ -753,6 +865,84 @@
           "category"
         ],
         "title": "SavedItemUpdate",
+        "type": "object"
+      },
+      "SizeChart": {
+        "additionalProperties": false,
+        "description": "The shop's body-measurement size chart for the item, in cm and kg.",
+        "properties": {
+          "basis": {
+            "enum": [
+              "body",
+              "unknown"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "enum": [
+                "height_cm",
+                "weight_kg",
+                "chest_cm",
+                "waist_cm",
+                "hips_cm",
+                "shoulder_width_cm",
+                "inseam_cm",
+                "sleeve_cm",
+                "neck_cm",
+                "thigh_cm"
+              ],
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Fields",
+            "type": "array"
+          },
+          "sizes": {
+            "items": {
+              "$ref": "#/components/schemas/ChartSize"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Sizes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "basis",
+          "fields",
+          "sizes"
+        ],
+        "title": "SizeChart",
+        "type": "object"
+      },
+      "StoreSize": {
+        "additionalProperties": false,
+        "description": "One of the sizes the shop offers for the item, as read from its page.",
+        "properties": {
+          "available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "StoreSize",
         "type": "object"
       },
       "ValidationError": {

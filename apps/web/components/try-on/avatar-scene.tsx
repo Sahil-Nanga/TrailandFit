@@ -3,12 +3,17 @@
 import {
   BodyModel,
   bakeLikenessFromUrl,
+  GARMENT_TEMPLATES,
+  type GarmentPicture,
+  GarmentModel,
+  garmentStyle,
   HAIR_COLORS,
   HAIR_STYLES,
   HairModel,
   type HairStyle,
   type Likeness,
   LikenessError,
+  loadGarmentPicture,
   Stage,
   useFittedShape,
 } from "@aurora/body3d";
@@ -18,10 +23,11 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import type { AvatarViewerProps } from "./avatar-viewer";
+import type { AvatarViewerProps, Garment } from "./avatar-viewer";
 
 const BODY_FIT_URL = process.env.NEXT_PUBLIC_BODY_FIT_URL ?? "http://127.0.0.1:8001";
 const NO_HAIR = "none";
+const UNDERWEAR_COLOR = "#2f3440";
 
 type FaceState =
   | { kind: "none" }
@@ -58,6 +64,38 @@ function usePhotoFace(photoUrl: string | null, weights: Record<string, number>, 
   return result?.url === photoUrl ? result.state : { kind: "working" };
 }
 
+type PictureState = { kind: "none" } | { kind: "loading" } | { kind: "ready"; picture: GarmentPicture } | { kind: "error"; message: string };
+
+/** The garment's product picture, prepared by the body-fit service (fetched from the shop there). */
+function useGarmentPicture(garment: Garment | null): PictureState {
+  const imageUrl = garment?.imageUrl ?? null;
+  const category = garment?.category ?? "top";
+  const [result, setResult] = useState<{ url: string; state: PictureState } | null>(null);
+  useEffect(() => {
+    if (!imageUrl) return;
+    let cancelled = false;
+    loadGarmentPicture(BODY_FIT_URL, imageUrl, category)
+      .then((picture) => !cancelled && setResult({ url: imageUrl, state: { kind: "ready", picture } }))
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "We couldn't use this product picture.";
+        setResult({ url: imageUrl, state: { kind: "error", message } });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrl, category]);
+  if (!imageUrl) return { kind: "none" };
+  return result?.url === imageUrl ? result.state : { kind: "loading" };
+}
+
+function garmentNote(garment: Garment, picture: PictureState): string {
+  if (picture.kind === "loading") return `Loading the picture of ${garment.title}…`;
+  if (picture.kind === "error") return `${garment.title}: ${picture.message} Showing it in grey.`;
+  if (picture.kind === "none") return `${garment.title} has no saved picture, so it's shown in grey.`;
+  return "";
+}
+
 export function AvatarScene({ measurements, outfit, photos, className }: AvatarViewerProps) {
   const [sex, setSex] = useState<"female" | "male">("female");
   const bodyType = sex === "male" ? 1 : 0; // the body's base shape: 0 female, 1 male
@@ -68,7 +106,17 @@ export function AvatarScene({ measurements, outfit, photos, className }: AvatarV
   const { shape, status } = useFittedShape(BODY_FIT_URL, measurements, bodyType);
   const face = usePhotoFace(photos.front, shape.weights, bodyType);
   const likeness = showFace && face.kind === "ready" ? face.likeness : null;
-  const wearing = [outfit.top?.title, outfit.bottom?.title].filter(Boolean).join(" + ");
+  const topPicture = useGarmentPicture(outfit.top);
+  const bottomPicture = useGarmentPicture(outfit.bottom);
+  const worn = [
+    outfit.bottom && { garment: outfit.bottom, picture: bottomPicture },
+    outfit.top && { garment: outfit.top, picture: topPicture },
+  ].filter((w): w is { garment: Garment; picture: PictureState } => Boolean(w));
+  const notes = worn.map((w) => garmentNote(w.garment, w.picture)).filter(Boolean);
+  // Skin under the garment models is hidden so it can't poke through them.
+  const hidden = worn.flatMap(
+    (w) => GARMENT_TEMPLATES[garmentStyle(w.garment.category, w.garment.title)]?.hidden ?? [],
+  );
 
   return (
     <div className="space-y-4">
@@ -78,7 +126,28 @@ export function AvatarScene({ measurements, outfit, photos, className }: AvatarV
         className={`relative overflow-hidden rounded-xl border bg-secondary/40 ${className ?? ""}`}
       >
         <Stage focusHeight={measurements.height_cm / 100} background={null}>
-          <BodyModel shape={shape} skinColor="#c99a7a" texture={likeness?.texture} eyeColor={likeness?.eyeColor} />
+          <BodyModel
+            shape={shape}
+            skinColor="#c99a7a"
+            texture={likeness?.texture}
+            eyeColor={likeness?.eyeColor}
+            hidden={hidden}
+          />
+          {/* Underwear, always: under any picked clothes, and so the body is never bare. */}
+          <Suspense fallback={null}>
+            <GarmentModel style="briefs" shape={shape} color={UNDERWEAR_COLOR} />
+          </Suspense>
+          {worn.map(({ garment, picture }) => (
+            <Suspense key={garment.id} fallback={null}>
+              <GarmentModel
+                style={garmentStyle(garment.category, garment.title)}
+                shape={shape}
+                texture={picture.kind === "ready" ? picture.picture.texture : null}
+                color={picture.kind === "ready" ? picture.picture.color : null}
+                room={garment.room}
+              />
+            </Suspense>
+          ))}
           {hair && (
             <Suspense fallback={null}>
               <HairModel style={hair} color={hairColor} shape={shape} />
@@ -93,10 +162,19 @@ export function AvatarScene({ measurements, outfit, photos, className }: AvatarV
         </p>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        {wearing ? `Picked: ${wearing}. ` : ""}
-        Clothes aren&rsquo;t drawn on the body yet; this preview shows your shape, face and hair.
-      </p>
+      <div className="space-y-1 text-sm text-muted-foreground" aria-live="polite">
+        {worn.length === 0 ? (
+          <p>Pick a top or a bottom to see it on your body.</p>
+        ) : (
+          <p>
+            Wearing {worn.map((w) => (w.garment.size ? `${w.garment.title} (${w.garment.size})` : w.garment.title)).join(" + ")}.
+            The product picture is on the front; the back uses its main colour. No folds.
+          </p>
+        )}
+        {notes.map((note) => (
+          <p key={note}>{note}</p>
+        ))}
+      </div>
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Face</p>

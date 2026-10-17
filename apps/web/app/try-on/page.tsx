@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { TryOn } from "@/components/try-on/try-on";
 
@@ -11,7 +12,9 @@ export default function TryOnPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Try on</h1>
         <p className="text-muted-foreground">Pick a top and a bottom from your wardrobe to wear together.</p>
       </div>
-      <TryOn />
+      <Suspense>
+        <TryOn />
+      </Suspense>
     </div>
   );
 }
