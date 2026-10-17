@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { notifyProfilesChanged } from "@/components/active-profile";
 import { api } from "@/lib/api";
 import { FIELD_ORDER } from "@aurora/measurements";
 import { displayRange, parseNumber, toMetric } from "@aurora/measurements";
@@ -46,6 +47,7 @@ export function PhotoFlow() {
   const [front, setFront] = useState<File | null>(null);
   const [side, setSide] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [keepPhotos, setKeepPhotos] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   function heightInCm(): number | null {
@@ -70,7 +72,7 @@ export function PhotoFlow() {
     }
     setBusy(true);
     try {
-      const { data, error, response } = await estimatePhoto(api, { front, side, heightCm, consent });
+      const { data, error, response } = await estimatePhoto(api, { front, side, heightCm, consent, keepPhotos });
       if (data) {
         // The photos are no longer needed: drop them from memory.
         setFront(null);
@@ -115,9 +117,10 @@ export function PhotoFlow() {
           <ShieldCheck aria-hidden />
           <AlertTitle>What happens to your photo</AlertTitle>
           <AlertDescription>
-            Your photo is sent to our server, measured, and deleted straight away. It is never
-            stored or shared, and nobody looks at it. Only the numbers are kept, and only if you
-            choose to save them.
+            Your photo is sent to our server, measured, and deleted straight away. It is not shared
+            and nobody looks at it. Only the numbers are kept, and only if you choose to save them.
+            If you want your photos in the 3D try-on preview, you can choose to keep them on the
+            next step; you can delete them anytime.
           </AlertDescription>
         </Alert>
 
@@ -196,6 +199,23 @@ export function PhotoFlow() {
           onChange={setSide}
         />
 
+        <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+          <input
+            type="checkbox"
+            checked={keepPhotos}
+            onChange={(event) => setKeepPhotos(event.target.checked)}
+            className="mt-0.5 size-4 accent-primary"
+            aria-describedby="keep-photos-help"
+          />
+          <span>
+            <span className="font-medium">Keep my photos for my 3D try-on preview</span>
+            <span id="keep-photos-help" className="mt-1 block text-xs text-muted-foreground">
+              Optional. Stored privately with your profile, without location or camera details.
+              You can delete them anytime from the profile page.
+            </span>
+          </span>
+        </label>
+
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy}>
           {busy ? (
             <>
@@ -231,12 +251,14 @@ export function PhotoFlow() {
           measurements,
           source: edited ? "photo_edited" : "photo",
           confidence: estimate.confidence,
+          photo_ids: estimate.kept_photo_ids ?? [],
         },
       });
       if (error || !data) {
         setSaveError(errorMessage(error, "Could not save. Please try again."));
         return;
       }
+      notifyProfilesChanged();
       router.push(`/profiles/${data.id}`);
     } catch {
       setSaveError("Can't reach the server. Check your connection and try again.");
@@ -250,8 +272,10 @@ export function PhotoFlow() {
         <AlertTitle>These are estimates</AlertTitle>
         <AlertDescription>
           Check every number, especially the highlighted ones, and correct anything that looks
-          off. Loose clothing like hoodies makes chest, waist and hips come out larger. Your
-          photo has already been deleted.
+          off. Loose clothing like hoodies makes chest, waist and hips come out larger.{" "}
+          {(estimate.kept_photo_ids ?? []).length > 0
+            ? "Your photos are kept privately for your try-on preview once you save."
+            : "Your photo has already been deleted."}
         </AlertDescription>
       </Alert>
       {(estimate.notes ?? []).length > 0 && (

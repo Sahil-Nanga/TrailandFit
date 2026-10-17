@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # published extension origin exactly in CORS_ORIGINS instead.
     cors_origin_regex: str | None = None
 
+    # Server-only Supabase secret key; enables keeping photos users opt in to keeping.
+    supabase_secret_key: SecretStr | None = None
+    photo_bucket: str = "profile-photos"
+    photo_url_seconds: int = 600  # lifetime of signed photo URLs
+
     # Photo estimation.
     pose_model_path: str = "models/pose_landmarker_heavy.task"
     max_photo_bytes: int = 10 * 1024 * 1024

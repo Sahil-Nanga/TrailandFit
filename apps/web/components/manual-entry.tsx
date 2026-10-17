@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { MeasurementForm, type MeasurementFormSubmit } from "@/components/measurement-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { notifyProfilesChanged } from "@/components/active-profile";
 import { api } from "@/lib/api";
 import { getAccessToken, signInUrl } from "@/lib/auth";
 import { clearDraft, saveDraft, useDraft } from "@/lib/draft";
@@ -34,6 +35,7 @@ export function ManualEntry() {
         return;
       }
       clearDraft(DRAFT_KEY);
+      notifyProfilesChanged();
       router.push(`/profiles/${data.id}`);
     } catch {
       setError("Can't reach the server. Check your connection and try again.");

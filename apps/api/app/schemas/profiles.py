@@ -1,6 +1,7 @@
 """Request and response bodies for /v1/profiles."""
 
 from typing import Literal, Self
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -20,6 +21,8 @@ class ProfileCreate(BaseModel):
     # "photo_edited" is accepted so the photo flow can save in one call after the user edits.
     source: Literal["manual", "photo", "photo_edited"] = "manual"
     confidence: ConfidenceMap | None = None
+    # Photos kept during the photo estimate (opt-in), to attach to this profile.
+    photo_ids: list[UUID] = Field(default_factory=list, max_length=2)
 
     @model_validator(mode="after")
     def _confidence_only_for_photos(self) -> Self:

@@ -1,4 +1,4 @@
-# Aurora Fitting Room
+# Trialandfit
 
 Get your body measurements from a photo or by entering them, save them, and take them to
 any clothing site with the browser extension. See `CLAUDE.md` for architecture and rules.
@@ -77,6 +77,16 @@ No code changes. Create a project, then:
    `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
 4. Production API: list the website and the published extension origin
    (`chrome-extension://<id>`) in `CORS_ORIGINS` and leave `CORS_ORIGIN_REGEX` unset.
+
+## Try-on (for the 3D renderer)
+
+The website's **Try on** page (`/try-on`) lets the user pick one top and one bottom from their
+wardrobe for the active profile. The 3D view is an empty placeholder:
+`apps/web/components/try-on/avatar-viewer.tsx`. Replace its body with the renderer and keep
+its props:
+
+- `measurements`: the active profile, in cm/kg (`height_cm` always set, others may be null)
+- `outfit.top` / `outfit.bottom`: `{ id, category, title, url, imageUrl }` or null
 
 ## Privacy notes
 

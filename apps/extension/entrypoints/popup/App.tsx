@@ -3,6 +3,9 @@ import {
   FIELD_INFO,
   FIELD_ORDER,
   formatForInput,
+  type FieldFit,
+  type SuggestionResult,
+  suggestFromTables,
   type Units,
   unitLabel,
 } from "@aurora/measurements";
@@ -12,6 +15,8 @@ import { type FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { WEB_URL } from "@/lib/config";
 import { DEFAULT_PREFS, loadPrefs, type Prefs, savePrefs } from "@/lib/prefs";
+import { originPattern } from "@/lib/messages";
+import { readProductImage, readTables } from "@/lib/read-tables";
 import { supabase } from "@/lib/supabase";
 
 function openWebsite(path: string) {
@@ -30,7 +35,7 @@ export default function App() {
   return (
     <main>
       <header>
-        <strong>Aurora</strong>
+        <strong>Trialandfit</strong>
         {session && (
           <button type="button" className="link" onClick={() => void supabase.auth.signOut()}>
             Sign out
@@ -89,21 +94,49 @@ function SignIn() {
   );
 }
 
+interface CurrentTab {
+  id: number;
+  url: string;
+  title: string;
+}
+
+/** The tab the popup was opened on, if it is a normal web page. */
+function useCurrentTab(): CurrentTab | null | undefined {
+  const [tab, setTab] = useState<CurrentTab | null | undefined>(undefined);
+  useEffect(() => {
+    // activeTab lets us see this tab's URL and title only because you opened the popup.
+    void browser.tabs.query({ active: true, currentWindow: true }).then(([current]) => {
+      const url = current?.url ?? "";
+      setTab(
+        current?.id !== undefined && /^https?:\/\//.test(url)
+          ? { id: current.id, url, title: current.title ?? "" }
+          : null,
+      );
+    });
+  }, []);
+  return tab;
+}
+
 function Signedin() {
+  const tab = useCurrentTab();
   const [profiles, setProfiles] = useState<MeasurementProfile[] | null>(null);
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [loaded, result] = await Promise.all([
+      const [loaded, result, settings] = await Promise.all([
         loadPrefs(),
         api.GET("/v1/profiles", { params: { query: { limit: 100 } } }).catch(() => null),
+        api.GET("/v1/account/settings").catch(() => null),
       ]);
       if (cancelled) return;
       setPrefs(loaded);
+      setActiveId(settings?.data?.active_profile_id ?? null);
       if (!result?.data) {
         setError(result ? errorMessage(result.error, "Could not load your measurements.") : "Can't reach the server.");
         setProfiles([]);
@@ -115,6 +148,12 @@ function Signedin() {
       cancelled = true;
     };
   }, []);
+
+  /** The active profile lives on the account, so the website and extension always agree. */
+  function chooseProfile(id: string) {
+    setActiveId(id);
+    void api.PATCH("/v1/account/settings", { body: { active_profile_id: id } });
+  }
 
   function update(next: Partial<Prefs>) {
     const merged = { ...prefs, ...next };
@@ -130,7 +169,7 @@ function Signedin() {
 
   if (profiles === null) return <p className="muted" role="status">Loading…</p>;
 
-  const profile = profiles.find((p) => p.id === prefs.profileId) ?? profiles[0];
+  const profile = profiles.find((p) => p.id === activeId) ?? profiles[0];
 
   return (
     <div className="stack">
@@ -150,7 +189,7 @@ function Signedin() {
           {profiles.length > 1 && (
             <label>
               Profile
-              <select value={profile.id} onChange={(event) => update({ profileId: event.target.value })}>
+              <select value={profile.id} onChange={(event) => chooseProfile(event.target.value)}>
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -160,6 +199,8 @@ function Signedin() {
             </label>
           )}
           <UnitSwitch units={prefs.units} onChange={(units) => update({ units })} />
+          {tab && <SizeSuggestion tabId={tab.id} profile={profile} units={prefs.units} />}
+          {tab && <AutoSuggestToggle tab={tab} />}
           <MeasurementList profile={profile} units={prefs.units} onCopy={copy} />
           <p className="muted small" aria-live="polite">
             {copied ? `Copied ${copied}` : " "}
@@ -167,7 +208,7 @@ function Signedin() {
         </>
       )}
 
-      <SavePage />
+      <SavePage tab={tab} />
 
       <button type="button" className="link" onClick={() => openWebsite("/profiles")}>
         Edit measurements on the website
@@ -234,24 +275,17 @@ function MeasurementList({
 
 type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
-function SavePage() {
-  const [tab, setTab] = useState<{ url: string; title: string } | null | undefined>(undefined);
+function SavePage({ tab }: { tab: CurrentTab | null | undefined }) {
   const [state, setState] = useState<SaveState>({ kind: "idle" });
-
-  useEffect(() => {
-    // activeTab lets us read the current tab's URL and title only because you opened the popup.
-    void browser.tabs.query({ active: true, currentWindow: true }).then(([current]) => {
-      const url = current?.url ?? "";
-      setTab(/^https?:\/\//.test(url) ? { url, title: current?.title ?? "" } : null);
-    });
-  }, []);
 
   async function save() {
     if (!tab) return;
     setState({ kind: "saving" });
     try {
+      const image = await readProductImage(tab.id);
       const { error } = await api.POST("/v1/saved-items", {
-        body: { url: tab.url, title: tab.title.slice(0, 300) || null },
+        // "Product name - Category | Shop" -> "Product name - Category"
+        body: { url: tab.url, title: tab.title.split(" | ")[0]?.trim().slice(0, 300) || null, image_url: image },
       });
       setState(error ? { kind: "error", message: errorMessage(error, "Could not save this page.") } : { kind: "saved" });
     } catch {
@@ -270,9 +304,155 @@ function SavePage() {
           : state.kind === "error"
             ? state.message
             : state.kind === "saved"
-              ? "Saved to your account for try-on later."
-              : "Saves this page's link and title to your account."}
+              ? "Saved to your wardrobe on the Trialandfit website."
+              : "Saves this item's link, title and picture to your wardrobe."}
       </p>
     </section>
+  );
+}
+
+function formatValue(field: FieldFit["field"], value: number, units: Units): string {
+  return `${formatForInput(field, value, units)} ${unitLabel(field, units)}`;
+}
+
+function FitLine({ fit, size, units }: { fit: FieldFit; size: string; units: Units }) {
+  const label = FIELD_INFO[fit.field].label;
+  const range = `${formatForInput(fit.field, fit.range.min, units)}–${formatValue(fit.field, fit.range.max, units)}`;
+  const yours = formatValue(fit.field, fit.value, units);
+  if (fit.status === "fits") return <li>✓ {label} {yours} fits {size} ({range})</li>;
+  return (
+    <li>
+      ! {label} {yours} is {fit.status === "below" ? "below" : "above"} {size} ({range})
+    </li>
+  );
+}
+
+function SizeSuggestion({
+  tabId,
+  profile,
+  units,
+}: {
+  tabId: number;
+  profile: MeasurementProfile;
+  units: Units;
+}) {
+  const [result, setResult] = useState<SuggestionResult | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Read the size chart and match it here in the extension; measurements never leave it.
+    void readTables(tabId).then((tables) => {
+      if (!cancelled) setResult(suggestFromTables(tables, profile.measurements));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tabId, profile]);
+
+  if (result === null) {
+    return <p className="muted small" role="status">Looking for a size chart…</p>;
+  }
+  if (result.kind === "no-chart") {
+    return (
+      <p className="muted small">
+        No size chart on this page. Open the shop&apos;s size guide, then open Trialandfit again for a size
+        suggestion.
+      </p>
+    );
+  }
+  if (result.kind === "garment-only") {
+    return (
+      <p className="muted small">
+        This size chart lists the garment&apos;s own measurements. Switch the size guide to body
+        sizes (often a &ldquo;Body size&rdquo; tab), then open Trialandfit again.
+      </p>
+    );
+  }
+  if (result.kind === "missing-measurements") {
+    const names = result.needed.map((f) => FIELD_INFO[f].label.toLowerCase()).join(", ");
+    return (
+      <p className="muted small">
+        This size chart uses {names}. Add {result.needed.length > 1 ? "them" : "it"} to your
+        profile for a size suggestion.
+      </p>
+    );
+  }
+
+  const { suggestion } = result;
+  return (
+    <section className="suggestion" aria-label="Size suggestion">
+      <p className="suggestion-size">
+        Try size <strong>{suggestion.label}</strong>
+      </p>
+      <ul className="fits">
+        {suggestion.fits.map((fit) => (
+          <FitLine key={fit.field} fit={fit} size={suggestion.label} units={units} />
+        ))}
+      </ul>
+      {suggestion.quality === "poor" && (
+        <p className="small">Your measurements are outside this chart; {suggestion.label} is the closest size.</p>
+      )}
+      {suggestion.alternative && (
+        <p className="small">
+          You&apos;re on the edge: {suggestion.alternative.label} if you prefer a{" "}
+          {suggestion.alternative.reason === "larger" ? "looser" : "closer"} fit.
+        </p>
+      )}
+      <p className="muted small">From this page&apos;s size chart and your “{profile.name}” profile.</p>
+    </section>
+  );
+}
+
+/** Per-shop opt-in for the automatic on-page suggestion card. */
+function AutoSuggestToggle({ tab }: { tab: CurrentTab }) {
+  const pattern = originPattern(tab.url);
+  const host = new URL(tab.url).hostname.replace(/^www\./, "");
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!pattern) return;
+    void browser.permissions.contains({ origins: [pattern] }).then(setEnabled);
+  }, [pattern]);
+
+  if (!pattern || enabled === null) return null;
+
+  function turnOn() {
+    if (!pattern) return;
+    // Must be called straight from the click: browsers only show permission prompts then.
+    void browser.permissions.request({ origins: [pattern] }).then(async (granted) => {
+      setEnabled(granted);
+      if (granted) {
+        await browser.scripting
+          .executeScript({ target: { tabId: tab.id }, files: ["/size-card.js"] })
+          .catch(() => undefined);
+      }
+    });
+  }
+
+  function turnOff() {
+    if (!pattern) return;
+    void browser.permissions.remove({ origins: [pattern] }).then((removed) => setEnabled(!removed));
+  }
+
+  return (
+    <div className="auto">
+      {enabled ? (
+        <>
+          <p className="small">Size suggestions appear automatically on {host}.</p>
+          <button type="button" className="link" onClick={turnOff}>
+            Turn off for {host}
+          </button>
+        </>
+      ) : (
+        <>
+          <button type="button" onClick={turnOn}>
+            Always suggest sizes on {host}
+          </button>
+          <p className="muted small">
+            Trialandfit will read only size charts on {host}, and show a small suggestion on its pages.
+          </p>
+        </>
+      )}
+    </div>
   );
 }

@@ -1,14 +1,19 @@
+from collections.abc import Sequence
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
+from app.api.deps import OptionalPhotoStore
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError, ErrorResponse
 from app.core.limits import RateLimiter
 from app.core.security import CurrentUserDep
-from app.estimation import PoseDetector, RetakeError
+from app.db.session import SessionDep
+from app.estimation import PoseDetector, RetakeError, RGBImage
 from app.schemas import MEASUREMENT_RANGES, PhotoEstimate
 from app.services import photos as service
+from app.services import profile_photos
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
@@ -68,9 +73,15 @@ async def estimate_photo(
     front_photo: Annotated[UploadFile, File(description="Full-body photo, facing the camera.")],
     height_cm: Annotated[float, Form(ge=_HEIGHT_MIN, le=_HEIGHT_MAX)],
     consent: Annotated[bool, Form(description="The user agreed to have this photo processed.")],
+    session: SessionDep,
+    store: OptionalPhotoStore,
     side_photo: Annotated[
         UploadFile | None, File(description="Optional side-on photo for better accuracy.")
     ] = None,
+    keep_photos: Annotated[
+        bool,
+        Form(description="The user opted to keep these photos for their 3D try-on preview."),
+    ] = False,
 ) -> PhotoEstimate:
     """Estimate measurements from a photo. Photos are processed in memory and never stored."""
     if not consent:
@@ -79,10 +90,25 @@ async def estimate_photo(
             "consent_required",
             "Please agree to photo processing first.",
         )
+    if keep_photos and store is None:
+        raise AppError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "photo_storage_unavailable",
+            "Keeping photos is not available right now. Untick it to continue.",
+        )
     front = await _read_limited(front_photo, settings.max_photo_bytes)
     side = await _read_limited(side_photo, settings.max_photo_bytes) if side_photo else None
     try:
-        return await service.estimate_from_photos(detector, front, side, height_cm)
+        keep = None
+        if keep_photos and store is not None:
+            photo_store = store
+
+            async def keep(
+                photos: Sequence[tuple[profile_photos.PhotoKind, RGBImage]],
+            ) -> list[UUID]:
+                return await profile_photos.keep_photos(session, photo_store, user.id, photos)
+
+        return await service.estimate_from_photos(detector, front, side, height_cm, keep)
     except service.PhotoError as exc:
         raise AppError(exc.status_code, exc.code, exc.message) from exc
     except RetakeError as exc:

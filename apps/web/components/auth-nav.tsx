@@ -25,9 +25,6 @@ export function AuthNav() {
 
   return (
     <div className="flex items-center gap-1">
-      <Link href="/profiles" className={linkClass}>
-        My profiles
-      </Link>
       <button
         type="button"
         className={linkClass}

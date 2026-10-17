@@ -7,14 +7,20 @@ other piece of metadata), measured, and discarded. Nothing is written to disk or
 import asyncio
 import io
 import logging
+from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from uuid import UUID
 
 import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.estimation import MediaPipeDetector, PoseDetector, RetakeError, RGBImage, estimate
 from app.schemas import MEASUREMENT_RANGES, Measurements, PhotoEstimate
+from app.services.profile_photos import PhotoKind
+
+# Called with the decoded photos after a successful estimate, when the user opted to keep them.
+KeepPhotos = Callable[[Sequence[tuple[PhotoKind, RGBImage]]], Awaitable[list[UUID]]]
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +102,16 @@ def _to_response(
 
 
 async def estimate_from_photos(
-    detector: PoseDetector, front: bytes, side: bytes | None, height_cm: float
+    detector: PoseDetector,
+    front: bytes,
+    side: bytes | None,
+    height_cm: float,
+    keep: KeepPhotos | None = None,
 ) -> PhotoEstimate:
-    """Raises PhotoError (bad upload) or RetakeError (photo can't be measured)."""
+    """Raises PhotoError (bad upload) or RetakeError (photo can't be measured).
+
+    Photos are kept only if `keep` is given (the user opted in) and the estimate succeeded.
+    """
     front_pixels = decode_photo(front, "front")
     side_pixels = decode_photo(side, "side") if side is not None else None
     loop = asyncio.get_running_loop()
@@ -106,10 +119,16 @@ async def estimate_from_photos(
         result = await loop.run_in_executor(
             _executor, estimate, detector, front_pixels, side_pixels, height_cm
         )
+        response = _to_response(height_cm, result.values, result.confidence, result.notes)
+        if keep is not None:
+            photos: list[tuple[PhotoKind, RGBImage]] = [("front", front_pixels)]
+            if side_pixels is not None:
+                photos.append(("side", side_pixels))
+            response.kept_photo_ids = await keep(photos)
     except RetakeError as exc:
         logger.info("Photo estimate needs a retake: %s", exc.code)
         raise
     finally:
         del front_pixels, side_pixels
     logger.info("Photo estimate completed (%d fields)", len(result.values))
-    return _to_response(height_cm, result.values, result.confidence, result.notes)
+    return response

@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/v1/account/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Settings
+         * @description The caller's settings, including which profile is active.
+         */
+        get: operations["get_settings_v1_account_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Settings
+         * @description Choose the active profile (it must be one of the caller's own profiles).
+         */
+        patch: operations["update_settings_v1_account_settings_patch"];
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -76,7 +100,10 @@ export interface paths {
         get: operations["get_profile_v1_profiles__profile_id__get"];
         put?: never;
         post?: never;
-        /** Delete Profile */
+        /**
+         * Delete Profile
+         * @description Delete a profile and any photos kept for it.
+         */
         delete: operations["delete_profile_v1_profiles__profile_id__delete"];
         options?: never;
         head?: never;
@@ -85,6 +112,30 @@ export interface paths {
          * @description Rename a profile and/or replace its measurements.
          */
         patch: operations["update_profile_v1_profiles__profile_id__patch"];
+        trace?: never;
+    };
+    "/v1/profiles/{profile_id}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Profile Photos
+         * @description Photos kept for this profile, as short-lived signed URLs (for the 3D try-on).
+         */
+        get: operations["list_profile_photos_v1_profiles__profile_id__photos_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Profile Photos
+         * @description Delete all photos kept for this profile. The measurements stay.
+         */
+        delete: operations["delete_profile_photos_v1_profiles__profile_id__photos_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/saved-items": {
@@ -125,13 +176,27 @@ export interface paths {
         delete: operations["delete_saved_item_v1_saved_items__item_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Saved Item
+         * @description Change an item's category (top / bottom / other).
+         */
+        patch: operations["update_saved_item_v1_saved_items__item_id__patch"];
         trace?: never;
     };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountSettings */
+        AccountSettings: {
+            /** Active Profile Id */
+            active_profile_id: string | null;
+        };
+        /** AccountSettingsUpdate */
+        AccountSettingsUpdate: {
+            /** Active Profile Id */
+            active_profile_id: string | null;
+        };
         /** Body_estimate_photo_v1_photos_estimate_post */
         Body_estimate_photo_v1_photos_estimate_post: {
             /**
@@ -146,6 +211,12 @@ export interface components {
             front_photo: string;
             /** Height Cm */
             height_cm: number;
+            /**
+             * Keep Photos
+             * @description The user opted to keep these photos for their 3D try-on preview.
+             * @default false
+             */
+            keep_photos: boolean;
             /**
              * Side Photo
              * @description Optional side-on photo for better accuracy.
@@ -252,6 +323,11 @@ export interface components {
             confidence: {
                 [key: string]: number;
             };
+            /**
+             * Kept Photo Ids
+             * @description Photos kept because the user opted in; pass them when saving the profile.
+             */
+            kept_photo_ids?: string[];
             measurements: components["schemas"]["Measurements"];
             /**
              * Notes
@@ -271,6 +347,8 @@ export interface components {
              * @default My measurements
              */
             name: string;
+            /** Photo Ids */
+            photo_ids?: string[];
             /**
              * Source
              * @default manual
@@ -289,6 +367,29 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ProfilePhoto */
+        ProfilePhoto: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "front" | "side";
+            /**
+             * Url
+             * @description Short-lived signed URL. Do not store or share it.
+             */
+            url: string;
+        };
         /**
          * ProfileUpdate
          * @description Partial update. `measurements`, when sent, replaces the whole set of values.
@@ -301,6 +402,11 @@ export interface components {
         /** SavedItem */
         SavedItem: {
             /**
+             * Category
+             * @enum {string}
+             */
+            category: "top" | "bottom" | "other";
+            /**
              * Created At
              * Format: date-time
              */
@@ -310,6 +416,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Image Url */
+            image_url: string | null;
             /** Title */
             title: string | null;
             /** Url */
@@ -317,6 +425,10 @@ export interface components {
         };
         /** SavedItemCreate */
         SavedItemCreate: {
+            /** Category */
+            category?: ("top" | "bottom" | "other") | null;
+            /** Image Url */
+            image_url?: string | null;
             /** Title */
             title?: string | null;
             /**
@@ -335,6 +447,14 @@ export interface components {
             offset: number;
             /** Total */
             total: number;
+        };
+        /** SavedItemUpdate */
+        SavedItemUpdate: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "top" | "bottom" | "other";
         };
         /** ValidationError */
         ValidationError: {
@@ -358,6 +478,86 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_settings_v1_account_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSettings"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_settings_v1_account_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSettings"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     health_v1_health_get: {
         parameters: {
             query?: {
@@ -718,6 +918,102 @@ export interface operations {
             };
         };
     };
+    list_profile_photos_v1_profiles__profile_id__photos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfilePhoto"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_profile_photos_v1_profiles__profile_id__photos_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_saved_items_v1_saved_items_get: {
         parameters: {
             query?: {
@@ -818,6 +1114,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_saved_item_v1_saved_items__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedItem"];
+                };
             };
             /** @description Unauthorized */
             401: {

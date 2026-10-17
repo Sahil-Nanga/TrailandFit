@@ -5,7 +5,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 
 // Pages that need an account. The API enforces auth on every request regardless; this only
 // sends signed-out visitors to sign-in instead of showing them an empty page.
-const PROTECTED_PREFIXES = ["/profiles", "/measure/photo"];
+const PROTECTED_PREFIXES = ["/profiles", "/measure/photo", "/wardrobe", "/try-on"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

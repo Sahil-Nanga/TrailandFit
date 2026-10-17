@@ -107,3 +107,76 @@ async def test_cannot_delete_other_users_item(db_client: httpx.AsyncClient, auth
 async def test_requires_auth(db_client: httpx.AsyncClient, method: str, path: str) -> None:
     response = await db_client.request(method, path, json={"url": "https://x.example"})
     assert response.status_code == 401
+
+
+# --- category and image -------------------------------------------------------------------
+
+from app.services.saved_items import guess_category  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("title", "url", "expected"),
+    [
+        ("Essential Hood, miesten huppari", "https://www.xxl.fi/pilago-essential-hood/p/1", "top"),
+        ("DRY-EX T-Shirt", "https://www.uniqlo.com/us/en/products/E482299-000", "top"),
+        ("Miesten collegehousut", "https://shop.example/p/2", "bottom"),
+        ("Slim Fit Jeans", "https://shop.example/jeans/3", "bottom"),
+        ("Running shorts", "https://shop.example/p/4", "bottom"),
+        ("Stickad tröja", "https://shop.example/p/5", "top"),
+        ("Steel water bottle", "https://shop.example/laptop-stand", "other"),
+        (None, "https://shop.example/p/6", "other"),
+    ],
+)
+def test_guess_category(title: str | None, url: str, expected: str) -> None:
+    assert guess_category(title, url) == expected
+
+
+async def test_category_guessed_and_image_saved(db_client: httpx.AsyncClient, auth: Auth) -> None:
+    item = await _save(
+        db_client,
+        auth,
+        ALICE,
+        url="https://www.xxl.fi/pilago-essential-hood/p/1227245",
+        title="Essential Hood, miesten huppari",
+        image_url="https://images.example/hood.jpg",
+    )
+    assert item["category"] == "top"
+    assert item["image_url"] == "https://images.example/hood.jpg"
+
+
+async def test_explicit_category_wins(db_client: httpx.AsyncClient, auth: Auth) -> None:
+    item = await _save(db_client, auth, ALICE, category="bottom")
+    assert item["category"] == "bottom"
+
+
+async def test_change_category(db_client: httpx.AsyncClient, auth: Auth) -> None:
+    item = await _save(db_client, auth, ALICE)
+    response = await db_client.patch(
+        f"{URL}/{item['id']}", json={"category": "other"}, headers=auth(ALICE)
+    )
+    assert response.status_code == 200
+    assert response.json()["category"] == "other"
+
+
+async def test_cannot_change_other_users_item(db_client: httpx.AsyncClient, auth: Auth) -> None:
+    item = await _save(db_client, auth, ALICE)
+    response = await db_client.patch(
+        f"{URL}/{item['id']}", json={"category": "other"}, headers=auth(BOB)
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param({"category": "shoes"}, id="unknown-category"),
+        pytest.param({"image_url": "javascript:alert(1)"}, id="bad-image-url"),
+    ],
+)
+async def test_category_and_image_validation(
+    db_client: httpx.AsyncClient, auth: Auth, body: dict[str, Any]
+) -> None:
+    response = await db_client.post(
+        URL, json={"url": "https://x.example", **body}, headers=auth(ALICE)
+    )
+    assert response.status_code == 422

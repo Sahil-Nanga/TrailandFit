@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { MeasurementForm, type MeasurementFormSubmit } from "@/components/measurement-form";
+import { ProfilePhotos } from "@/components/profile/profile-photos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { notifyProfilesChanged } from "@/components/active-profile";
 import { api } from "@/lib/api";
 import { SOURCE_LABEL } from "@aurora/measurements";
 
@@ -113,6 +115,7 @@ export function EditProfile({ id }: { id: string }) {
       }
       setState({ kind: "loaded", profile: data });
       setSaved(true);
+      notifyProfilesChanged();
     } catch {
       setSaveError(OFFLINE);
     }
@@ -127,6 +130,7 @@ export function EditProfile({ id }: { id: string }) {
       });
       if (response.ok || response.status === 404) {
         setDeleteOpen(false);
+        notifyProfilesChanged();
         router.push("/profiles");
         return;
       }
@@ -183,12 +187,14 @@ export function EditProfile({ id }: { id: string }) {
         }
       />
 
+      <ProfilePhotos profileId={id} />
+
       <section aria-labelledby="danger" className="space-y-3 border-t pt-8">
         <h2 id="danger" className="font-medium">
           Delete this profile
         </h2>
         <p className="text-sm text-muted-foreground">
-          This permanently removes these measurements from your account.
+          This permanently removes these measurements, and any photos kept with them, from your account.
         </p>
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogTrigger render={<Button variant="destructive" />}>

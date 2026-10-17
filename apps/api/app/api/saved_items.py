@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Response, status
 from app.core.errors import AppError, ErrorResponse
 from app.core.security import CurrentUserDep
 from app.db.session import SessionDep
-from app.schemas import SavedItem, SavedItemCreate, SavedItemPage
+from app.schemas import SavedItem, SavedItemCreate, SavedItemPage, SavedItemUpdate
 from app.services import saved_items as service
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
@@ -32,6 +32,19 @@ async def list_saved_items(
 async def save_item(body: SavedItemCreate, user: CurrentUserDep, session: SessionDep) -> SavedItem:
     """Save a clothing page for later. Saving the same URL again returns the existing item."""
     return await service.save_item(session, user.id, body)
+
+
+@router.patch("/{item_id}", response_model=SavedItem, responses={404: {"model": ErrorResponse}})
+async def update_saved_item(
+    item_id: UUID, body: SavedItemUpdate, user: CurrentUserDep, session: SessionDep
+) -> SavedItem:
+    """Change an item's category (top / bottom / other)."""
+    try:
+        return await service.update_saved_item(session, user.id, item_id, body)
+    except service.SavedItemNotFoundError as exc:
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, "saved_item_not_found", "Item not found."
+        ) from exc
 
 
 @router.delete(

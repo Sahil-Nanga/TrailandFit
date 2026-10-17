@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.formparsers import MultiPartParser
 
 from app.api import v1_router
+from app.api.deps import close_photo_store
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.limits import BodySizeLimitMiddleware
@@ -18,6 +19,7 @@ from app.services import photos as photos_service
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
     await dispose_engine()
+    await close_photo_store()
     photos_service.shutdown()
 
 
@@ -26,7 +28,7 @@ def create_app() -> FastAPI:
     configure_logging(settings.log_level)
 
     app = FastAPI(
-        title="Aurora Fitting Room API",
+        title="Trialandfit API",
         version="0.1.0",
         lifespan=lifespan,
         # Interactive docs only outside production; the OpenAPI JSON stays for client generation.

@@ -17,6 +17,11 @@ export type ProfileUpdate = Schemas["ProfileUpdate"];
 export type ProfilePage = Schemas["ProfilePage"];
 export type ErrorResponse = Schemas["ErrorResponse"];
 export type PhotoEstimate = Schemas["PhotoEstimate"];
+export type SavedItem = Schemas["SavedItem"];
+export type SavedItemPage = Schemas["SavedItemPage"];
+export type AccountSettings = Schemas["AccountSettings"];
+export type ProfilePhoto = Schemas["ProfilePhoto"];
+export type GarmentCategory = SavedItem["category"];
 export type MeasurementField = keyof Measurements;
 
 // --- Validation ranges, read from the schema so the UI matches the server exactly ----------
@@ -69,6 +74,8 @@ export interface PhotoEstimateInput {
   side?: Blob | null;
   heightCm: number;
   consent: boolean;
+  /** The user opted to keep these photos for their 3D try-on preview. */
+  keepPhotos?: boolean;
 }
 
 /**
@@ -82,6 +89,7 @@ export function estimatePhoto(client: ApiClient, input: PhotoEstimateInput) {
     side_photo: input.side ?? null,
     height_cm: String(input.heightCm),
     consent: String(input.consent),
+    keep_photos: String(input.keepPhotos ?? false),
   };
   return client.POST("/v1/photos/estimate", {
     body: fields as unknown as Body,

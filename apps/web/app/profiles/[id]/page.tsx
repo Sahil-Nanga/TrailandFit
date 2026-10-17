@@ -14,8 +14,10 @@ async function EditProfileForParams({ params }: Pick<PageProps<"/profiles/[id]">
 
 export default function EditProfilePage({ params }: PageProps<"/profiles/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
-      <EditProfileForParams params={params} />
-    </Suspense>
+    <div className="mx-auto max-w-2xl">
+      <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
+        <EditProfileForParams params={params} />
+      </Suspense>
+    </div>
   );
 }

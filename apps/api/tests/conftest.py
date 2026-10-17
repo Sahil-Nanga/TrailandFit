@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from alembic import command
+from app.api.deps import get_photo_store
 from app.core.security import CurrentUserDep, TokenVerifier, get_token_verifier
 from app.db.session import get_session
 from app.main import create_app
@@ -149,8 +150,34 @@ def database_url() -> Iterator[str]:
         yield url
 
 
+class FakePhotoStore:
+    """In-memory stand-in for Supabase Storage."""
+
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+
+    async def put(self, key: str, data: bytes, content_type: str) -> None:
+        assert content_type == "image/jpeg"
+        self.objects[key] = data
+
+    async def signed_url(self, key: str, expires_in: int) -> str:
+        assert key in self.objects
+        return f"https://storage.test/sign/{key}?expires={expires_in}"
+
+    async def delete(self, keys: list[str]) -> None:
+        for key in keys:
+            self.objects.pop(key, None)
+
+
 @pytest.fixture
-async def db_client(database_url: str, verifier: TokenVerifier) -> AsyncIterator[httpx.AsyncClient]:
+def photo_store() -> FakePhotoStore:
+    return FakePhotoStore()
+
+
+@pytest.fixture
+async def db_app(
+    database_url: str, verifier: TokenVerifier, photo_store: FakePhotoStore
+) -> AsyncIterator[FastAPI]:
     engine = create_async_engine(database_url)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -160,11 +187,19 @@ async def db_client(database_url: str, verifier: TokenVerifier) -> AsyncIterator
 
     app = _build_app(verifier)
     app.dependency_overrides[get_session] = _session
-    transport = httpx.ASGITransport(app=app)
+    app.dependency_overrides[get_photo_store] = lambda: photo_store
     try:
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
-            yield c
+        yield app
     finally:
         async with engine.begin() as conn:
-            await conn.execute(text("TRUNCATE measurement_profiles, saved_items"))
+            await conn.execute(
+                text("TRUNCATE account_settings, profile_photos, measurement_profiles, saved_items")
+            )
         await engine.dispose()
+
+
+@pytest.fixture
+async def db_client(db_app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
+    transport = httpx.ASGITransport(app=db_app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c

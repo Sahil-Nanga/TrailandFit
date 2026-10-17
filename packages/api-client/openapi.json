@@ -1,6 +1,49 @@
 {
   "components": {
     "schemas": {
+      "AccountSettings": {
+        "properties": {
+          "active_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Profile Id"
+          }
+        },
+        "required": [
+          "active_profile_id"
+        ],
+        "title": "AccountSettings",
+        "type": "object"
+      },
+      "AccountSettingsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "active_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Profile Id"
+          }
+        },
+        "required": [
+          "active_profile_id"
+        ],
+        "title": "AccountSettingsUpdate",
+        "type": "object"
+      },
       "Body_estimate_photo_v1_photos_estimate_post": {
         "properties": {
           "consent": {
@@ -19,6 +62,12 @@
             "minimum": 50.0,
             "title": "Height Cm",
             "type": "number"
+          },
+          "keep_photos": {
+            "default": false,
+            "description": "The user opted to keep these photos for their 3D try-on preview.",
+            "title": "Keep Photos",
+            "type": "boolean"
           },
           "side_photo": {
             "anyOf": [
@@ -351,6 +400,15 @@
             "title": "Confidence",
             "type": "object"
           },
+          "kept_photo_ids": {
+            "description": "Photos kept because the user opted in; pass them when saving the profile.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Kept Photo Ids",
+            "type": "array"
+          },
           "measurements": {
             "$ref": "#/components/schemas/Measurements"
           },
@@ -399,6 +457,15 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "photo_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Photo Ids",
+            "type": "array"
           },
           "source": {
             "default": "manual",
@@ -451,6 +518,41 @@
         "title": "ProfilePage",
         "type": "object"
       },
+      "ProfilePhoto": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "front",
+              "side"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "url": {
+            "description": "Short-lived signed URL. Do not store or share it.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "url",
+          "created_at"
+        ],
+        "title": "ProfilePhoto",
+        "type": "object"
+      },
       "ProfileUpdate": {
         "additionalProperties": false,
         "description": "Partial update. `measurements`, when sent, replaces the whole set of values.",
@@ -484,6 +586,15 @@
       },
       "SavedItem": {
         "properties": {
+          "category": {
+            "enum": [
+              "top",
+              "bottom",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -493,6 +604,17 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
           },
           "title": {
             "anyOf": [
@@ -514,6 +636,8 @@
           "id",
           "url",
           "title",
+          "category",
+          "image_url",
           "created_at"
         ],
         "title": "SavedItem",
@@ -522,6 +646,36 @@
       "SavedItemCreate": {
         "additionalProperties": false,
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "top",
+                  "bottom",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2048,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
           "title": {
             "anyOf": [
               {
@@ -582,6 +736,25 @@
         "title": "SavedItemPage",
         "type": "object"
       },
+      "SavedItemUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "top",
+              "bottom",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "title": "SavedItemUpdate",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -631,11 +804,113 @@
     }
   },
   "info": {
-    "title": "Aurora Fitting Room API",
+    "title": "Trialandfit API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/account/settings": {
+      "get": {
+        "description": "The caller's settings, including which profile is active.",
+        "operationId": "get_settings_v1_account_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings",
+        "tags": [
+          "account"
+        ]
+      },
+      "patch": {
+        "description": "Choose the active profile (it must be one of the caller's own profiles).",
+        "operationId": "update_settings_v1_account_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Settings",
+        "tags": [
+          "account"
+        ]
+      }
+    },
     "/v1/health": {
       "get": {
         "description": "Liveness check. Public; returns no user data.",
@@ -927,6 +1202,7 @@
     },
     "/v1/profiles/{profile_id}": {
       "delete": {
+        "description": "Delete a profile and any photos kept for it.",
         "operationId": "delete_profile_v1_profiles__profile_id__delete",
         "parameters": [
           {
@@ -1129,6 +1405,139 @@
         ]
       }
     },
+    "/v1/profiles/{profile_id}/photos": {
+      "delete": {
+        "description": "Delete all photos kept for this profile. The measurements stay.",
+        "operationId": "delete_profile_photos_v1_profiles__profile_id__photos_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Profile Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Profile Photos",
+        "tags": [
+          "profiles"
+        ]
+      },
+      "get": {
+        "description": "Photos kept for this profile, as short-lived signed URLs (for the 3D try-on).",
+        "operationId": "list_profile_photos_v1_profiles__profile_id__photos_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Profile Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProfilePhoto"
+                  },
+                  "title": "Response List Profile Photos V1 Profiles  Profile Id  Photos Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Profile Photos",
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
     "/v1/saved-items": {
       "get": {
         "description": "The caller's saved clothing pages, newest first.",
@@ -1312,6 +1721,83 @@
           }
         ],
         "summary": "Delete Saved Item",
+        "tags": [
+          "saved items"
+        ]
+      },
+      "patch": {
+        "description": "Change an item's category (top / bottom / other).",
+        "operationId": "update_saved_item_v1_saved_items__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedItemUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Saved Item",
         "tags": [
           "saved items"
         ]

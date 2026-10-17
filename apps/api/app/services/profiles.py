@@ -18,6 +18,8 @@ from app.schemas import (
     ProfilePage,
     ProfileUpdate,
 )
+from app.services import profile_photos
+from app.storage import PhotoStore
 
 
 class ProfileNotFoundError(Exception):
@@ -87,6 +89,8 @@ async def create_profile(
     )
     _apply_measurements(row, data.measurements)
     session.add(row)
+    await session.flush()
+    await profile_photos.attach_photos(session, user_id, row.id, data.photo_ids)
     await session.commit()
     await session.refresh(row)
     return _to_schema(row)
@@ -110,7 +114,18 @@ async def update_profile(
     return _to_schema(row)
 
 
-async def delete_profile(session: AsyncSession, user_id: str, profile_id: UUID) -> None:
+class PhotoStorageUnavailableError(Exception):
+    """The profile has kept photos but photo storage is not configured."""
+
+
+async def delete_profile(
+    session: AsyncSession, user_id: str, profile_id: UUID, store: PhotoStore | None
+) -> None:
     row = await _get_owned_row(session, user_id, profile_id)
+    keys = await profile_photos.photo_keys(session, user_id, profile_id)
+    if keys:
+        if store is None:
+            raise PhotoStorageUnavailableError
+        await store.delete(keys)  # rows go with the profile (ON DELETE CASCADE)
     await session.delete(row)
     await session.commit()
